@@ -52,7 +52,8 @@ export interface MapZoomToSpanOptions {
     zoomRange?: [number, number];
     viewport: IViewport;
     overlays: IOverlay[];
-    projection: IProjection;
+    projection?: IProjection;
+    worldSize?: number;
     precision?: number;
 }
 
@@ -76,36 +77,61 @@ export interface IProjection {
 
 // Classes
 export class WebMercatorProjection implements IProjection {
-    constructor(private readonly worldSize: number) {}
+    constructor(private readonly worldSize: number = WebMercatorProjection.defaultWorldSize) {}
 
-    project(latLng: ILatLng, zoom: number): IPoint {
+    project(latLng: ILatLng, zoom?: number): IPoint {
+        const x = latLng.lng / 360 + 0.5;
+        const y = 0.5 - (Math.log(Math.tan(Math.PI * (0.25 + latLng.lat / 360))) / Math.PI) / 2;
+
+        if (zoom === undefined) {
+            return { x, y };
+        }
+
         const scale = Math.pow(2, zoom) * this.worldSize;
-        const x = (latLng.lng / 360 + 0.5) * scale;
-        const y = (0.5 - (Math.log(Math.tan(Math.PI * (0.25 + latLng.lat / 360))) / Math.PI) / 2) * scale;
-        return { x, y };
+        return { x: x * scale, y: y * scale };
     }
 
-    unproject(point: IPoint, zoom: number): ILatLng {
+    unproject(point: IPoint, zoom?: number): ILatLng {
+        if (zoom === undefined) {
+            return {
+                lat: (point.x - 0.5) * 360,
+                lng: (2 * Math.atan(Math.exp(Math.PI * (1 - 2 * point.y))) - Math.PI / 2) * 180 / Math.PI
+            }
+        }
+
         const scale = Math.pow(2, zoom) * this.worldSize;
         const lng = (point.x / scale - 0.5) * 360;
         const lat = (2 * Math.atan(Math.exp(Math.PI * (1 - 2 * point.y / scale))) - Math.PI / 2) * 180 / Math.PI;
         return { lat, lng };
     }
+
+    static readonly defaultWorldSize = 512;
 }
 
 // Helper functions
+export function wrapLng(lng: number): number {
+    if (lng > 180) {
+        return lng - 360;
+    } else if (lng < -180) {
+        return lng + 360;
+    }
+    return lng;
+}
+
+export function wrapLat(lat: number): number {
+    if (lat > 90) {
+        return 90;
+    } else if (lat < -90) {
+        return -90;
+    }
+    return lat;
+}
+
 export function wrapLatLng(latLng: ILatLng): ILatLng {
-    if (latLng.lng > 180) {
-        latLng.lng -= 360;
-    } else if (latLng.lng < -180) {
-        latLng.lng += 360;
-    }
-    if (latLng.lat > 90) {
-        latLng.lat = 90;
-    } else if (latLng.lat < -90) {
-        latLng.lat = -90;
-    }
-    return latLng;
+    return {
+        lat: wrapLat(latLng.lat),
+        lng: wrapLng(latLng.lng),
+    };
 }
 
 export function extendPointBounds(bounds: IPointBounds, otherBounds: IPointBounds): IPointBounds {
@@ -142,33 +168,14 @@ export function getOverlaysContainingPointBounds(overlays: IOverlay[], zoom: num
         bounds = extendPointBounds(bounds, { topLeft: overlayTopLeft, bottomRight: overlayBottomRight });
     }
 
-    console.log('--------------------------------');
-    console.log('zoom', zoom);
-    console.log('bounds', bounds);
-    const latlngBounds = {
-        ne: {
-            lat: projection.unproject({ x: bounds.bottomRight.x, y: bounds.topLeft.y }, zoom).lat,
-            lng: projection.unproject({ x: bounds.bottomRight.x, y: bounds.topLeft.y }, zoom).lng,
-        },
-        sw: {
-            lat: projection.unproject({ x: bounds.topLeft.x, y: bounds.bottomRight.y }, zoom).lat,
-            lng: projection.unproject({ x: bounds.topLeft.x, y: bounds.bottomRight.y }, zoom).lng,
-        },
-    };
-    // const firstOverlayPosition = overlays[0].position;
-    // const firstOverlayPositionPoint = projection.project(firstOverlayPosition, zoom);
-    // const antimeridianX = projection.project({ lat: 0, lng: 180 }, zoom).x;
-    // const isAcrossAntimeridian = Math.abs(firstOverlayPositionPoint.x - bounds.topLeft.x) > ;
-    console.log('--------------------------------', latlngBounds);
-
-    return bounds;
+    return bounds
 }
 
 export function isAllOverlaysCanBePutInsideContentArea(overlayBounds: IPointBounds, contentBounds: IPointBounds): boolean {
-    const overlayWidth = overlayBounds.bottomRight.x - overlayBounds.topLeft.x;
-    const overlayHeight = overlayBounds.bottomRight.y - overlayBounds.topLeft.y;
-    const contentWidth = contentBounds.bottomRight.x - contentBounds.topLeft.x;
-    const contentHeight = contentBounds.bottomRight.y - contentBounds.topLeft.y;
+    const overlayWidth = Math.abs(overlayBounds.bottomRight.x - overlayBounds.topLeft.x);
+    const overlayHeight = Math.abs(overlayBounds.bottomRight.y - overlayBounds.topLeft.y);
+    const contentWidth = Math.abs(contentBounds.bottomRight.x - contentBounds.topLeft.x);
+    const contentHeight = Math.abs(contentBounds.bottomRight.y - contentBounds.topLeft.y);
     return overlayWidth <= contentWidth && overlayHeight <= contentHeight;
 }
 
@@ -178,9 +185,7 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
         return { ok: false, error: 'No overlays provided' };
     }
 
-    console.log('positions', options.overlays.map(o => JSON.stringify(o.position)));
-
-    const projection = options.projection;
+    const projection = options.projection || new WebMercatorProjection(options.worldSize || WebMercatorProjection.defaultWorldSize);
     const contentBounds: IPointBounds = {
         topLeft: {
             x: options.viewport.insets.left,
@@ -200,7 +205,9 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
     const zoomRange = options.zoomRange || [0, 20];
     let leftZoomValue = zoomRange[0];
     let rightZoomValue = zoomRange[1];
-    const precision = options.precision || 0.01;
+
+    // some map library uses integer zoom levels, so we set 1 as default precision
+    const precision = options.precision || 1;
 
     let resultZoom = leftZoomValue;
     let resultOverlayBounds: IPointBounds | null = null;
@@ -227,12 +234,11 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
         x: (resultOverlayBounds.topLeft.x + resultOverlayBounds.bottomRight.x) / 2,
         y: (resultOverlayBounds.topLeft.y + resultOverlayBounds.bottomRight.y) / 2,
     };
-
     const viewportCenterPoint = {
         x: overlayCenterPoint.x - centerOffsetInPixels.x,
         y: overlayCenterPoint.y - centerOffsetInPixels.y,
     };
-    const viewportCenterLatLng = options.projection.unproject(viewportCenterPoint, resultZoom);
+    const viewportCenterLatLng = projection.unproject(viewportCenterPoint, resultZoom);
 
     return {
         ok: true,

@@ -1,23 +1,20 @@
 import { createRoot } from 'react-dom/client';
-import { useEffect, useRef, useState, createContext, useContext, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { IInsets, mapZoomToSpan, WebMercatorProjection, IOverlay } from '../index';
 import './main.css';
-import { Button, Slider, Input, Typography, Space, Card, Divider, InputNumber } from 'antd';
-import 'antd/dist/reset.css';
 import styled from 'styled-components';
-
-const { Title, Text } = Typography;
-
-// Context
-const AMapContext = createContext<any>(null);
+import maplibregl, { PositionAnchor, LngLatBounds } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Styled Components
-const StyledButton = styled(Button)`
+const StyledButton = styled.button`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
   margin: 5px 0;
+  padding: 5px 10px;
+  cursor: pointer;
 `;
 
 const StrongButton = styled(StyledButton)`
@@ -37,7 +34,7 @@ const MapContainer = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
-const ControlPanel = styled(Card)`
+const ControlPanel = styled.div`
   flex: 1;
   overflow-y: auto;
   height: 100vh;
@@ -63,13 +60,14 @@ function getRandomSizeRect() {
     };
 }
 
-function getAnchorCircle() {
-    const el = document.createElement('div');
-    el.style.width = '10px';
-    el.style.height = '10px';
-    el.style.backgroundColor = 'rgba(0, 0, 255, 0.5)';
-    el.style.borderRadius = '50%';
-    return el;
+// Add this function before the App component
+function createCircleElement(color: string, size: number): HTMLElement {
+  const circle = document.createElement('div');
+  circle.style.width = `${size}px`;
+  circle.style.height = `${size}px`;
+  circle.style.borderRadius = '50%';
+  circle.style.backgroundColor = color;
+  return circle;
 }
 
 // Map Component
@@ -80,16 +78,22 @@ interface MapProps {
 
 const Map = ({ onMapReady, onMapClick }: MapProps) => {
     const mapRef = useRef(null);
-    const AMap = useContext(AMapContext);
     const [map, setMap] = useState<any>(null);
 
     useEffect(() => {
-        if (AMap && mapRef.current) {
-            const map = new AMap.Map(mapRef.current);
+        if (mapRef.current) {
+            const map = new maplibregl.Map({
+                container: mapRef.current,
+                style: 'https://demotiles.maplibre.org/style.json',
+                center: [0, 0],
+                zoom: 2,
+                maxZoom: 20,
+                minZoom: 0,
+            });
             setMap(map);
             onMapReady(map);
         }
-    }, [AMap, onMapReady]);
+    }, [onMapReady]);
 
     useEffect(() => {
         if (map) {
@@ -106,27 +110,18 @@ const Map = ({ onMapReady, onMapClick }: MapProps) => {
     return <div ref={mapRef} id="map" style={{ width: '100%', height: '100%' }}></div>;
 };
 
+const projection = new WebMercatorProjection(WebMercatorProjection.defaultWorldSize);
+
 // Main App Component
 const App = () => {
-    const [AMap, setAMap] = useState<any>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
     const [map, setMap] = useState<any>(null);
     const [operationLock, setOperationLock] = useState('none');
     const [markers, setMarkers] = useState<any[]>([]);
-    const [insets, setInsets] = useState<IInsets>({ top: 80, left: 80, bottom: 80, right: 80 });
+    const [insets, setInsets] = useState<IInsets>({ top: 0, left: 0, bottom: 0, right: 0 });
     const [zoomRange, setZoomRange] = useState<[number, number]>([0, 20]);
-    const [precision, setPrecision] = useState<number>(0.01);
-
-    useEffect(() => {
-        // (window as any).AMapLoader.load({
-        //     key: import.meta.env.VITE_AMAP_KEY,
-        //     version: '2.0'
-        // }).then((AMap: any) => {
-        //     setAMap(AMap);
-        // });
-        setAMap((window as any).AMap);
-    }, []);
+    const [precision, setPrecision] = useState<number>(1);
 
     useEffect(() => {
         const updateViewportSize = () => {
@@ -149,61 +144,52 @@ const App = () => {
     const addMarker = useCallback((position: any) => {
         const anchorList = [
             { name: 'top-left', anchor: { x: 0, y: 0 } },
-            { name: 'top-center', anchor: { x: 0.5, y: 0 } },
+            { name: 'top', anchor: { x: 0.5, y: 0 } },
             { name: 'top-right', anchor: { x: 1, y: 0 } },
-            { name: 'middle-left', anchor: { x: 0, y: 0.5 } },
+            { name: 'left', anchor: { x: 0, y: 0.5 } },
             { name: 'center', anchor: { x: 0.5, y: 0.5 } },
-            { name: 'middle-right', anchor: { x: 1, y: 0.5 } },
+            { name: 'right', anchor: { x: 1, y: 0.5 } },
             { name: 'bottom-left', anchor: { x: 0, y: 1 } },
-            { name: 'bottom-center', anchor: { x: 0.5, y: 1 } },
+            { name: 'bottom', anchor: { x: 0.5, y: 1 } },
             { name: 'bottom-right', anchor: { x: 1, y: 1 } },
         ];
 
         const anchor = anchorList[Math.floor(Math.random() * anchorList.length)];
         const { el, size } = getRandomSizeRect();
 
-        const rectMarker = new AMap.Marker({
-            content: el,
-            offset: new AMap.Pixel(-anchor.anchor.x * size.width, -anchor.anchor.y * size.height),
-            position: position,
-            bubble: true
-        });
-
-        const anchorMarker = new AMap.Marker({
-            content: getAnchorCircle(),
-            offset: new AMap.Pixel(-5, -5),
-            position: position,
-            bubble: true
-        });
-
-        map.add(rectMarker);
-        map.add(anchorMarker);
+        const rectMarker = new maplibregl.Marker({
+            element: el,
+            anchor: anchor.name as PositionAnchor,
+        }).setLngLat([position.lng, position.lat]).addTo(map);
+        
+        const anchorMarker = new maplibregl.Marker({
+            element: createCircleElement('blue', 10),
+            anchor: 'center'
+        }).setLngLat([position.lng, position.lat]).addTo(map);
 
         setMarkers([...markers, { position: { lng: position.lng, lat: position.lat }, rectMarker, anchorMarker, size, anchor }]);
     }, [map, markers]);
 
     const clearMarkers = useCallback(() => {
         markers.forEach(marker => {
-            map.remove(marker.rectMarker);
-            map.remove(marker.anchorMarker);
+            marker.rectMarker.remove();
+            marker.anchorMarker.remove();
         });
         setMarkers([]);
     }, [map, markers]);
 
     const zoomToSpan = useCallback(() => {
-        console.log('markers', markers);
         if (!mapContainerRef.current) return;
 
-        const { clientWidth, clientHeight } = mapContainerRef.current;
         const zoomToSpanResult = mapZoomToSpan({
             viewport: {
                 size: {
-                    width: clientWidth,
-                    height: clientHeight,
+                    width: viewportSize.width,
+                    height: viewportSize.height,
                 },
                 insets
             },
-            projection: new WebMercatorProjection(256),
+            projection,
             overlays: markers.map((marker): IOverlay => {
                 const { position, size, anchor: { anchor } } = marker;
                 return {
@@ -214,45 +200,46 @@ const App = () => {
             }),
             zoomRange,
             precision,
-        })
+        });
+
         if (zoomToSpanResult.ok) {
             const { center, zoom } = zoomToSpanResult.result;
-            console.log('center', center, 'zoom', zoom);
-            map.setZoomAndCenter(zoom, new AMap.LngLat(center.lng, center.lat));
+            map.setZoom(zoom);
+            map.setCenter([center.lng, center.lat]);
         } else {
             console.error('zoomToSpan', zoomToSpanResult.error);
         }
-    }, [map, markers, insets, zoomRange, precision]);
+    }, [map, markers, viewportSize, insets, zoomRange, precision]);
 
     const onMapReady = useCallback((map: any) => {
         setMap(map);
         setViewportSize({
-            width: map.getSize().width,
-            height: map.getSize().height
+            width: map.getContainer().clientWidth,
+            height: map.getContainer().clientHeight
         });
     }, []);
 
     const onMapClick = useCallback((event: any) => {
+        const point = projection.project(event.lngLat, map.getZoom());
+
         if (operationLock === 'none') {
             return;
         }
 
         if (operationLock === 'addMarker') {
-            addMarker(event.lnglat);
+            addMarker(event.lngLat);
             return;
         }
     }, [map, operationLock, addMarker])
 
     return (
-        AMap ?
+        maplibregl ?
             <FullPageContainer>
                 <MapContainer ref={mapContainerRef}>
-                    <AMapContext.Provider value={AMap}>
-                        <Map
-                            onMapReady={onMapReady}
-                            onMapClick={onMapClick}
-                        />
-                    </AMapContext.Provider>
+                    <Map
+                        onMapReady={onMapReady}
+                        onMapClick={onMapClick}
+                    />
                     <div className="insets-indicator" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
                         <div className="insets-indicator-top" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${insets.top}px`, backgroundColor: 'rgba(128, 128, 0, 0.5)' }}></div>
                         <div className="insets-indicator-left" style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${insets.left}px`, backgroundColor: 'rgba(128, 128, 0, 0.5)' }}></div>
@@ -261,15 +248,15 @@ const App = () => {
                     </div>
                 </MapContainer>
                 <ControlPanel>
-                    <Title level={4} style={{ marginBottom: '20px' }}>zoomToSpan Demo</Title>
-                    <Divider />
-                    <Space direction="vertical" style={{ width: '100%' }} size="large">
+                    <h4 style={{ marginBottom: '20px' }}>zoomToSpan Demo</h4>
+                    <hr />
+                    <div style={{ width: '100%' }}>
                         <div>
-                            <Text strong>Map Viewport Size:</Text>
-                            <Text> {viewportSize.width}px x {viewportSize.height}px</Text>
+                            <strong>Map Viewport Size:</strong>
+                            <span> {viewportSize.width}px x {viewportSize.height}px</span>
                         </div>
-                        <Space direction="vertical">
-                            <StrongButton type='dashed' onClick={() => {
+                        <div>
+                            <StrongButton onClick={() => {
                                 setOperationLock((operationLock: string) => {
                                     if (operationLock === 'none') {
                                         return 'addMarker';
@@ -279,54 +266,68 @@ const App = () => {
                                     return operationLock;
                                 });
                             }}>{operationLock === 'none' ? 'Add markers' : 'Stop adding markers'}</StrongButton>
-                            <StrongButton type='dashed' onClick={clearMarkers} disabled={markers.length === 0}>Clear markers</StrongButton>
-                        </Space>
-                        <Divider />
+                            <StrongButton onClick={clearMarkers} disabled={markers.length === 0}>Clear markers</StrongButton>
+                        </div>
+                        <hr />
                         <div>
-                            <Text strong>Precision:</Text>
-                            <InputNumber
+                            <strong>Precision:</strong>
+                            <input
+                                type="number"
                                 min={0.00001}
                                 max={1}
                                 value={precision}
-                                onChange={(value) => setPrecision(value as number)}
+                                onChange={(e) => setPrecision(parseFloat(e.target.value))}
                                 style={{ width: '100%', marginTop: '10px' }}
                             />
                         </div>
                         <div>
-                            <Text strong>Zoom range:</Text>
-                            <Slider
-                                range
+                            <strong>Zoom range:</strong>
+                            <input
+                                type="range"
                                 min={0}
                                 max={20}
-                                value={zoomRange}
-                                onChange={(value) => setZoomRange(value as [number, number])}
-                                marks={{
-                                    0: '0',
-                                    20: '20'
-                                }}
-                                tooltip={{
-                                    formatter: (value) => value?.toFixed(precision)
-                                }}
-                                style={{ marginTop: '10px' }}
+                                value={zoomRange[0]}
+                                onChange={(e) => setZoomRange([parseInt(e.target.value), zoomRange[1]])}
+                                style={{ width: '100%', marginTop: '10px' }}
                             />
-                            <Text>Current range: {zoomRange[0].toFixed(precision)} - {zoomRange[1].toFixed(precision)}</Text>
+                            <input
+                                type="range"
+                                min={0}
+                                max={20}
+                                value={zoomRange[1]}
+                                onChange={(e) => setZoomRange([zoomRange[0], parseInt(e.target.value)])}
+                                style={{ width: '100%', marginTop: '10px' }}
+                            />
+                            <span>Current range: {zoomRange[0].toFixed(precision)} - {zoomRange[1].toFixed(precision)}</span>
                         </div>
                         <div>
-                            <Text strong>Insets:</Text>
-                            <Space direction="vertical" style={{ width: '100%', marginTop: '10px' }}>
-                                <Input addonBefore="Top" type="number" value={insets.top} onChange={(e) => setInsets({ ...insets, top: parseInt(e.target.value) })} />
-                                <Input addonBefore="Left" type="number" value={insets.left} onChange={(e) => setInsets({ ...insets, left: parseInt(e.target.value) })} />
-                                <Input addonBefore="Bottom" type="number" value={insets.bottom} onChange={(e) => setInsets({ ...insets, bottom: parseInt(e.target.value) })} />
-                                <Input addonBefore="Right" type="number" value={insets.right} onChange={(e) => setInsets({ ...insets, right: parseInt(e.target.value) })} />
-                            </Space>
+                            <strong>Insets:</strong>
+                            <div style={{ width: '100%', marginTop: '10px' }}>
+                                <div>
+                                    <label>Top</label>
+                                    <input type="number" value={insets.top} onChange={(e) => setInsets({ ...insets, top: parseInt(e.target.value) })} />
+                                </div>
+                                <div>
+                                    <label>Left</label>
+                                    <input type="number" value={insets.left} onChange={(e) => setInsets({ ...insets, left: parseInt(e.target.value) })} />
+                                </div>
+                                <div>
+                                    <label>Bottom</label>
+                                    <input type="number" value={insets.bottom} onChange={(e) => setInsets({ ...insets, bottom: parseInt(e.target.value) })} />
+                                </div>
+                                <div>
+                                    <label>Right</label>
+                                    <input type="number" value={insets.right} onChange={(e) => setInsets({ ...insets, right: parseInt(e.target.value) })} />
+                                </div>
+                            </div>
                         </div>
-                        <StrongButton type='primary' disabled={markers.length === 0} onClick={zoomToSpan}>zoomToSpan</StrongButton>
-                    </Space>
+                        <StrongButton onClick={zoomToSpan} disabled={markers.length === 0}>zoomToSpan</StrongButton>
+                    </div>
                 </ControlPanel>
             </FullPageContainer>
             :
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <Text>Loading AMap Lib...</Text>
+                <span>Loading MapLibre GL JS...</span>
             </div>
     );
 };

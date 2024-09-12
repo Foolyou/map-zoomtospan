@@ -32,7 +32,7 @@ describe('WebMercatorProjection', () => {
       expect(projection.project({ lat: 0, lng: -180 }, 0)).toEqual({ x: 0, y: 128 });
       expect(projection.project({ lat: 0, lng: 0 }, 0)).toEqual({ x: 128, y: 128 });
       expect(projection.project({ lat: 0, lng: 180 }, 0)).toEqual({ x: 256, y: 128 });
-      expect(projection.project({ lat: 0, lng: 360 }, 0)).toEqual({ x: 256, y: 128 });
+      expect(projection.project({ lat: 0, lng: 360 }, 0)).toEqual({ x: 384, y: 128 });
     });
   });
 

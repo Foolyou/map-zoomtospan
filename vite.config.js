@@ -23,13 +23,6 @@ export default defineConfig({
       mangle: false,
       keep_fnames: true,
       keep_classnames: true
-    },
-    // Ensure external peerDependencies
-    external: ['react', 'react-dom'],
-    // Global variables to use in UMD build for externalized deps
-    globals: {
-      react: 'React',
-      'react-dom': 'ReactDOM'
     }
   }
 })

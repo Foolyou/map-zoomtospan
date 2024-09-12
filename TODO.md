@@ -1,10 +1,8 @@
-[ ] Across anti-meridian support
 [ ] Fixed center support
 [ ] Demo for polylines
 [ ] Demo for polygons
 [ ] Demo for infowindows
-[ ] Demo for maplibre-js
-[ ] Demo for google-maps
+[x] Demo for maplibre-js
 [ ] Documents and examples
 [ ] Tests
 [ ] NPM package

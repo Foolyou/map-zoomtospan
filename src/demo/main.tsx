@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { IInsets, mapZoomToSpan, WebMercatorProjection, IOverlay } from '../index';
 import './main.css';
 import styled from 'styled-components';
-import maplibregl, { PositionAnchor, LngLatBounds } from 'maplibre-gl';
+import maplibregl, { PositionAnchor } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Styled Components
@@ -121,7 +121,9 @@ const App = () => {
     const [markers, setMarkers] = useState<any[]>([]);
     const [insets, setInsets] = useState<IInsets>({ top: 0, left: 0, bottom: 0, right: 0 });
     const [zoomRange, setZoomRange] = useState<[number, number]>([0, 20]);
-    const [precision, setPrecision] = useState<number>(1);
+    const [precision, setPrecision] = useState<number>(0.01);
+    const [forcedCenter, setForcedCenter] = useState<{ lng: number; lat: number } | null>(null);
+    const [forcedCenterMarker, setForcedCenterMarker] = useState<any>(null);
 
     useEffect(() => {
         const updateViewportSize = () => {
@@ -140,6 +142,22 @@ const App = () => {
             window.removeEventListener('resize', updateViewportSize);
         };
     }, []);
+
+    useEffect(() => {
+        if (map && forcedCenter) {
+            if (forcedCenterMarker) {
+                forcedCenterMarker.remove();
+            }
+            const newMarker = new maplibregl.Marker({
+                element: createCircleElement('green', 15),
+                anchor: 'center'
+            }).setLngLat([forcedCenter.lng, forcedCenter.lat]).addTo(map);
+            setForcedCenterMarker(newMarker);
+        } else if (forcedCenterMarker) {
+            forcedCenterMarker.remove();
+            setForcedCenterMarker(null);
+        }
+    }, [map, forcedCenter]);
 
     const addMarker = useCallback((position: any) => {
         const anchorList = [
@@ -176,7 +194,12 @@ const App = () => {
             marker.anchorMarker.remove();
         });
         setMarkers([]);
-    }, [map, markers]);
+        if (forcedCenterMarker) {
+            forcedCenterMarker.remove();
+            setForcedCenterMarker(null);
+        }
+        setForcedCenter(null);
+    }, [map, markers, forcedCenterMarker]);
 
     const zoomToSpan = useCallback(() => {
         if (!mapContainerRef.current) return;
@@ -200,6 +223,7 @@ const App = () => {
             }),
             zoomRange,
             precision,
+            center: forcedCenter ? { lng: forcedCenter.lng, lat: forcedCenter.lat } : undefined,
         });
 
         if (zoomToSpanResult.ok) {
@@ -209,7 +233,7 @@ const App = () => {
         } else {
             console.error('zoomToSpan', zoomToSpanResult.error);
         }
-    }, [map, markers, viewportSize, insets, zoomRange, precision]);
+    }, [map, markers, viewportSize, insets, zoomRange, precision, forcedCenter]);
 
     const onMapReady = useCallback((map: any) => {
         setMap(map);
@@ -220,14 +244,18 @@ const App = () => {
     }, []);
 
     const onMapClick = useCallback((event: any) => {
-        const point = projection.project(event.lngLat, map.getZoom());
-
         if (operationLock === 'none') {
             return;
         }
 
         if (operationLock === 'addMarker') {
             addMarker(event.lngLat);
+            return;
+        }
+
+        if (operationLock === 'setForcedCenter') {
+            setForcedCenter(event.lngLat);
+            setOperationLock('none');
             return;
         }
     }, [map, operationLock, addMarker])
@@ -266,8 +294,24 @@ const App = () => {
                                     return operationLock;
                                 });
                             }}>{operationLock === 'none' ? 'Add markers' : 'Stop adding markers'}</StrongButton>
-                            <StrongButton onClick={clearMarkers} disabled={markers.length === 0}>Clear markers</StrongButton>
+                            <StrongButton onClick={clearMarkers} disabled={markers.length === 0 && !forcedCenter}>Clear markers</StrongButton>
                         </div>
+                        <div>
+                            <StrongButton onClick={() => setOperationLock('setForcedCenter')}>
+                                {forcedCenter ? 'Change forced center' : 'Set forced center'}
+                            </StrongButton>
+                            {forcedCenter && (
+                                <StrongButton onClick={() => setForcedCenter(null)}>
+                                    Clear forced center
+                                </StrongButton>
+                            )}
+                        </div>
+                        {forcedCenter && (
+                            <div>
+                                <strong>Forced Center:</strong>
+                                <span> {forcedCenter.lng.toFixed(4)}, {forcedCenter.lat.toFixed(4)}</span>
+                            </div>
+                        )}
                         <hr />
                         <div>
                             <strong>Precision:</strong>
@@ -321,6 +365,7 @@ const App = () => {
                                 </div>
                             </div>
                         </div>
+                        
                         <StrongButton onClick={zoomToSpan} disabled={markers.length === 0}>zoomToSpan</StrongButton>
                     </div>
                 </ControlPanel>

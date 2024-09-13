@@ -171,6 +171,32 @@ export function getOverlaysContainingPointBounds(overlays: IOverlay[], zoom: num
     return bounds
 }
 
+export function extendOverlaysContainingPointBoundsWithCenter(overlays: IOverlay[], zoom: number, projection: IProjection, center: ILatLng): IPointBounds {
+    const centerPoint = projection.project(center, zoom);
+    const overlayBounds = getOverlaysContainingPointBounds(overlays, zoom, projection);
+    
+    const leftToCenter = Math.abs(centerPoint.x - overlayBounds.topLeft.x);
+    const rightToCenter = Math.abs(overlayBounds.bottomRight.x - centerPoint.x);
+    const maxHorizontalDistance = Math.max(leftToCenter, rightToCenter);
+    
+    const topToCenter = Math.abs(centerPoint.y - overlayBounds.topLeft.y);
+    const bottomToCenter = Math.abs(overlayBounds.bottomRight.y - centerPoint.y);
+    const maxVerticalDistance = Math.max(topToCenter, bottomToCenter);
+    
+    const extendedBounds = {
+        topLeft: {
+            x: centerPoint.x - maxHorizontalDistance,
+            y: centerPoint.y - maxVerticalDistance
+        },
+        bottomRight: {
+            x: centerPoint.x + maxHorizontalDistance,
+            y: centerPoint.y + maxVerticalDistance
+        }
+    };
+    
+    return extendedBounds;
+}
+
 export function isAllOverlaysCanBePutInsideContentArea(overlayBounds: IPointBounds, contentBounds: IPointBounds): boolean {
     const overlayWidth = Math.abs(overlayBounds.bottomRight.x - overlayBounds.topLeft.x);
     const overlayHeight = Math.abs(overlayBounds.bottomRight.y - overlayBounds.topLeft.y);
@@ -206,8 +232,7 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
     let leftZoomValue = zoomRange[0];
     let rightZoomValue = zoomRange[1];
 
-    // some map library uses integer zoom levels, so we set 1 as default precision
-    const precision = options.precision || 1;
+    const precision = options.precision || 0.01;
 
     let resultZoom = leftZoomValue;
     let resultOverlayBounds: IPointBounds | null = null;
@@ -215,7 +240,12 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
 
     while (rightZoomValue - leftZoomValue > precision) {
         const currentZoom = (leftZoomValue + rightZoomValue) / 2;
-        const overlayBounds = getOverlaysContainingPointBounds(options.overlays, currentZoom, projection);
+        let overlayBounds = getOverlaysContainingPointBounds(options.overlays, currentZoom, projection);
+
+        if (options.center) {
+            overlayBounds = extendOverlaysContainingPointBoundsWithCenter(options.overlays, currentZoom, projection, options.center);
+        }
+
         if (isAllOverlaysCanBePutInsideContentArea(overlayBounds, contentBounds)) {
             leftZoomValue = currentZoom;
             resultZoom = currentZoom;
@@ -243,7 +273,7 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
     return {
         ok: true,
         result: {
-            center: viewportCenterLatLng,
+            center: options.center || viewportCenterLatLng,
             zoom: resultZoom,
         }
     };

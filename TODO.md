@@ -1,10 +1,17 @@
-[ ] Fixed center support
-[ ] Demo for polylines
-[ ] Demo for polygons
-[ ] Demo for infowindows
-[x] Demo for maplibre-js
-[ ] Documents and examples
-[ ] Tests
-[ ] NPM package
-[ ] GitHub Pages
-[ ] .js domain
+- [x] Fixed center support
+- [ ] Demo for polylines
+- [ ] Demo for polygons
+- [ ] Demo for infowindows
+- [x] Demo for maplibre-js
+- [ ] Documents and examples
+- [ ] Tests
+- [ ] NPM package
+- [ ] GitHub Pages
+- [ ] .js domain
+- [ ] helpers for maplibre-js
+- [ ] helpers for leaflet
+- [ ] helpers for google-maps-api
+- [ ] helpers for AMap
+- [ ] helpers for BaiduMap
+- [ ] helpers for TencentMap
+- [ ] helpers for MicroApps

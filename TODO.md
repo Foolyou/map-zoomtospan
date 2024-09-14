@@ -4,9 +4,9 @@
 - [x] Demo for polygons
 - [ ] Demo for infowindows
 - [ ] Anti-meridian support
-- [ ] Documents and examples
+- [x] Documents and examples
 - [x] Tests
-- [ ] NPM package
+- [x] NPM package
 - [ ] GitHub Pages
 - [ ] .js domain
 - [ ] helpers for maplibre-js

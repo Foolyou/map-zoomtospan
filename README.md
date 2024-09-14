@@ -29,24 +29,50 @@ Our approach solves this problem by providing a general "best view" calculation 
 ```typescript
 import { mapZoomToSpan } from "map-zoomtospan";
 
-const result = mapZoomToSpan({
+const mapResult = mapZoomToSpan({
   viewport: {
     width: 800, // width of the map element
     height: 600, // height of the map element
     inset: { top: 10, right: 40, bottom: 60, left: 10 }, // padding around the map element
   },
   overlays: [
-    {
+    { // a marker
       position: { lat: 10, lng: 10 },
       boundingRect: { width: 10, height: 10 },
       anchor: { x: 0.5, y: 0.5 },
     },
+    { // a polyline
+      points: [
+        { lat: 10, lng: 10 },
+        { lat: 20, lng: 20 },
+        { lat: 20, lng: 10 },
+      ],
+      width: 5, // line width
+    },
+    { // a polygon
+      points: [
+        { lat: 10, lng: 10 },
+        { lat: 20, lng: 20 },
+        { lat: 20, lng: 10 },
+        { lat: 10, lng: 10 }
+      ],
+      width: 8, // line width
+    },
+    { // a circle
+      center: { lat: 10, lng: 10 },
+      radius: 5,
+    }
   ],
   zoomRange: [4, 18], // zoom level range
   worldSize: 256, // size of the world map
   precision: 0.001, // zoom level precision
-
 });
+
+if (mapResult.ok) {
+    mapSetCenterAndZoom(mapResult.result.center, mapResult.result.zoom);
+} else {
+  console.error(mapResult.error);
+}
 ```
 
 ## Key Concepts
@@ -164,6 +190,8 @@ If you are using a custom projection or world size, you can adjust the `worldSiz
 ### Precision
 
 Some map libraries support fractional zoom levels. If you want more precise zoom calculations, set `precision` to a decimal value for better accuracy.
+
+**However, if your map library doesn't support fractional zoom levels, it's important to set `precision` to `1` to ensure correct behavior.**
 
 ### Zoom Range
 

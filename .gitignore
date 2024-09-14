@@ -25,3 +25,5 @@ lib
 *.sw?
 
 .env
+
+coverage

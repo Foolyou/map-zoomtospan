@@ -107,6 +107,8 @@ export const MapLibrePage = () => {
     const [forcedCenterMarker, setForcedCenterMarker] = useState<maplibregl.Marker | null>(null);
     const [circles, setCircles] = useState<any[]>([]);
     const [circleMarkers, setCircleMarkers] = useState<maplibregl.Marker[]>([]);
+    const [resultZoom, setResultZoom] = useState<number>(0);
+    const [resultCenter, setResultCenter] = useState<{ lng: number; lat: number } | null>(null);
 
     useEffect(() => {
         const updateViewportSize = () => {
@@ -362,6 +364,8 @@ export const MapLibrePage = () => {
 
         if (zoomToSpanResult.ok) {
             const { center, zoom } = zoomToSpanResult.result;
+            setResultZoom(zoom);
+            setResultCenter(center);
             if (map) {
                 map.setZoom(zoom);
                 map.setCenter([center.lng, center.lat]);
@@ -445,6 +449,8 @@ export const MapLibrePage = () => {
                     insets={insets}
                     setInsets={setInsets}
                     zoomToSpan={zoomToSpan}
+                    resultZoom={resultZoom}
+                    resultCenter={resultCenter}
                 />
             </FullPageContainer>
             :

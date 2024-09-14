@@ -174,7 +174,7 @@ export function extendLatLngBounds(bounds: ILatLngBounds, otherBounds: ILatLng |
             },
         };
     }
-    return bounds;
+    throw new Error('Invalid bounds');
 }
 
 export function extendPointBounds(bounds: IPointBounds, otherBounds: IPointBounds): IPointBounds {
@@ -316,17 +316,20 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
     };
 
     const zoomRange = options.zoomRange || [0, 20];
-    let leftZoomValue = zoomRange[0];
-    let rightZoomValue = zoomRange[1];
-
     const precision = options.precision || 0.01;
 
-    let resultZoom = leftZoomValue;
+    let resultZoom = zoomRange[1];
     let resultOverlayBounds: IPointBounds | null = null;
     let foundValidZoom = false;
 
-    while (rightZoomValue - leftZoomValue > precision) {
-        const currentZoom = (leftZoomValue + rightZoomValue) / 2;
+    const totalSteps = Math.floor((zoomRange[1] - zoomRange[0]) / precision);
+
+    let leftZoomStep = 0;
+    let rightZoomStep = totalSteps;
+
+    do {
+        const currentZoomStep = Math.floor((leftZoomStep + rightZoomStep) / 2);
+        let currentZoom = zoomRange[0] + currentZoomStep * precision;
         let overlayBounds = getOverlaysContainingPointBounds(overlays, currentZoom, projection);
 
         if (options.center) {
@@ -334,14 +337,14 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
         }
 
         if (isAllOverlaysCanBePutInsideContentArea(overlayBounds, contentBounds)) {
-            leftZoomValue = currentZoom;
+            leftZoomStep = currentZoomStep + 1;
             resultZoom = currentZoom;
             resultOverlayBounds = overlayBounds;
             foundValidZoom = true;
         } else {
-            rightZoomValue = currentZoom;
+            rightZoomStep = currentZoomStep - 1;
         }
-    }
+    } while (rightZoomStep >= leftZoomStep);
 
     if (!foundValidZoom || !resultOverlayBounds) {
         return { ok: false, error: 'No valid zoom was found' };

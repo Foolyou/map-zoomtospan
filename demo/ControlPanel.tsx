@@ -20,6 +20,8 @@ interface ControlPanelProps {
     insets: IInsets;
     setInsets: (insets: IInsets) => void;
     zoomToSpan: () => void;
+    resultZoom: number | null;
+    resultCenter: { lng: number; lat: number } | null;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -40,7 +42,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
     setZoomRange,
     insets,
     setInsets,
-    zoomToSpan
+    zoomToSpan,
+    resultZoom,
+    resultCenter
 }) => {
     return (
         <ControlPanelContainer>
@@ -153,6 +157,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
                 
                 <StrongButton onClick={zoomToSpan}>zoomToSpan</StrongButton>
+                <div>
+                    <strong>Result Zoom:</strong>
+                    <span> {resultZoom != null ? resultZoom.toFixed(precision) : 'N/A'}</span>
+                </div>
+                <div>
+                    <strong>Result Center:</strong>
+                    <span> {resultCenter != null ? `${resultCenter.lng.toFixed(precision)}, ${resultCenter.lat.toFixed(precision)}` : 'N/A'}</span>
+                </div>
             </div>
         </ControlPanelContainer>
     );

@@ -5,7 +5,7 @@
 - [ ] Demo for infowindows
 - [ ] Anti-meridian support
 - [ ] Documents and examples
-- [ ] Tests
+- [x] Tests
 - [ ] NPM package
 - [ ] GitHub Pages
 - [ ] .js domain

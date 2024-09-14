@@ -1,7 +1,10 @@
 {
   "name": "map-zoomtospan",
   "description": "A cross-platform utility designed to calculate the optimal map zoom level and/or center point for a given map viewport, ensuring a balanced view of map features.",
-  "repository": "https://github.com/Foolyou/map-zoomtospan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Foolyou/map-zoomtospan.git"
+  },
   "author": "Chen An <chen-an@outlook.com>",
   "private": false,
   "keywords": [
@@ -39,7 +42,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui --coverage.enabled=true",
     "coverage": "vitest run --coverage",
-    "prepublish:": "npm run tsc"
+    "version:": "npm run tsc"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",

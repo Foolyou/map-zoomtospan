@@ -42,7 +42,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui --coverage.enabled=true",
     "coverage": "vitest run --coverage",
-    "version:": "npm run tsc"
+    "preversion:": "npm run tsc"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",

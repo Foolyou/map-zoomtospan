@@ -28,7 +28,7 @@
     "地图缩放级别计算",
     "地图中心点计算"
   ],
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "license": "MIT",
   "main": "./lib/index.js",

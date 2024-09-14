@@ -1,6 +1,6 @@
 # map-zoomtospan
 
-A cross-platform utility designed to calculate the optimal map zoom level and/or center point for a given map viewport, ensuring a balanced view of map features.
+map-zoomtospan is a general-purpose "best view" calculation tool, independent of any specific mapping library. While we currently provide a [MapLibre demo](./demo/MapLibrePage.tsx) to demonstrate its functionality, more demos for additional mapping libraries are coming soon. Adapters for various mapping libraries will also be available in the near future.
 
 ## Installation
 
@@ -10,9 +10,7 @@ npm install map-zoomtospan
 
 ## What is "Best View"?
 
-map-zoomtospan is a general-purpose "best view" calculation tool, independent of any specific mapping library. While we currently provide a [MapLibre demo](./demo/MapLibrePage.tsx) to demonstrate its functionality, more demos for additional mapping libraries are coming soon. Adapters for various mapping libraries will also be available in the near future.
-
-A "best view" refers to the zoom level that allows the majority of features/layers to fit within the viewport, with the map centered on these features. For a clearer understanding, see the example below:
+A "best view" refers to the zoom level that allows all features/layers to fit within the viewport, with the map centered on these features. For a clearer understanding, see the example below:
 
 ![best-view](./public/bestview.png)
 
@@ -22,7 +20,9 @@ Many mapping libraries, like MapLibre, offer `fitBounds/setFitView` methods for 
 
 While adjusting the padding of the `fitBounds` method can somewhat improve the fit, it often requires case-by-case tweaking rather than offering a consistent solution.
 
-Our approach solves this problem by providing a general "best view" calculation that accommodates not only markers, polylines, and polygons, but also custom overlays. The key requirement for custom overlays is that their size remains consistent, regardless of zoom level.
+Our approach solves this problem by providing a general "best view" calculation that accommodates not only markers, polylines, and polygons, but also custom overlays.
+
+The key requirement for custom overlays is that their size remains consistent, regardless of zoom level. We use a binary search algorithm to find the optimal view. **If the `boundingRect` changes with the zoom level, the binary search may not work correctly**. If this is a common scenario for you, please let us know, and we can provide an alternative strategy.
 
 ## How to Calculate the Best View
 
@@ -177,7 +177,7 @@ or
 }
 ```
 
-For custom overlays, determine the `position`, `anchor`, and `boundingRect` based on your specific requirements. We use a binary search algorithm to find the optimal view. However, if the `boundingRect` changes with the zoom level, the binary search may not work correctly. If this is a common scenario for you, please let us know, and we can provide an alternative strategy.
+For custom overlays, determine the `position`, `anchor`, and `boundingRect` based on your specific requirements.
 
 ### Projection and World Size
 

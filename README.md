@@ -177,7 +177,7 @@ or
 }
 ```
 
-For custom overlays, determine the `position`, `anchor`, and `boundingRect` based on the specific requirements.
+For custom overlays, determine the `position`, `anchor`, and `boundingRect` based on your specific requirements. We use a binary search algorithm to find the optimal view. However, if the `boundingRect` changes with the zoom level, the binary search may not work correctly. If this is a common scenario for you, please let us know, and we can provide an alternative strategy.
 
 ### Projection and World Size
 

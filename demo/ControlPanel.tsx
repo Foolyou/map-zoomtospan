@@ -22,6 +22,7 @@ interface ControlPanelProps {
     zoomToSpan: () => void;
     resultZoom: number | null;
     resultCenter: { lng: number; lat: number } | null;
+    fitBounds: () => void;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -44,8 +45,19 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
     setInsets,
     zoomToSpan,
     resultZoom,
-    resultCenter
+    resultCenter,
+    fitBounds
 }) => {
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
+
     return (
         <ControlPanelContainer>
             <h4 style={{ marginBottom: '20px' }}>zoomToSpan Demo</h4>
@@ -157,6 +169,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
                 
                 <StrongButton onClick={zoomToSpan}>zoomToSpan</StrongButton>
+                <StrongButton onClick={fitBounds}>fitBounds</StrongButton>
+                <StrongButton onClick={toggleFullscreen}>Toggle Fullscreen</StrongButton>
                 <div>
                     <strong>Result Zoom:</strong>
                     <span> {resultZoom != null ? resultZoom.toFixed(precision) : 'N/A'}</span>

@@ -87,8 +87,6 @@ const Map = ({ onMapReady, onMapClick }: MapProps) => {
 
 const projection = new WebMercatorProjection(WebMercatorProjection.defaultWorldSize);
 
-// ControlPanel Component
-
 // Main App Component
 export const MapLibrePage = () => {
     const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -375,6 +373,38 @@ export const MapLibrePage = () => {
         }
     };
 
+    const fitBounds = () => {
+        if (!map) return;
+        let bounds = new maplibregl.LngLatBounds();
+        markers.forEach(marker => {
+            bounds.extend([marker.position.lng, marker.position.lat]);
+        });
+        polylines.forEach(polyline => {
+            polyline.geometry.coordinates.forEach((coord: any) => {
+                bounds.extend([coord[0], coord[1]]);
+            });
+        });
+        polygons.forEach(polygon => {
+            polygon.geometry.coordinates[0].forEach((coord: any
+                
+            ) => {
+                bounds.extend([coord[0], coord[1]]);
+            });
+        });
+        circles.forEach(circle => {
+            bounds.extend([circle.center.lng, circle.center.lat]);
+        });
+        
+        map.fitBounds(bounds, {
+            padding: {
+                top: insets.top,
+                left: insets.left,
+                bottom: insets.bottom,
+                right: insets.right,
+            },
+        });
+    }
+
     const onMapReady = (map: any) => {
         setMap(map);
         setViewportSize({
@@ -451,6 +481,7 @@ export const MapLibrePage = () => {
                     zoomToSpan={zoomToSpan}
                     resultZoom={resultZoom}
                     resultCenter={resultCenter}
+                    fitBounds={fitBounds}
                 />
             </FullPageContainer>
             :

@@ -1,12 +1,18 @@
 export {
     mapZoomToSpan,
-    WebMercatorProjection
+    WebMercatorProjection,
+    extendLatLngBounds
 } from './zoomtospan';
 
 export type {
     ILatLng,
+    ILatLngBounds,
     IPoint,
     IInsets,
     IOverlay,
+    ICircleOverlay,
+    IPolygonOverlay,
+    IPolylineOverlay,
+    IMarkerOverlay,
     IViewport
 } from './zoomtospan';

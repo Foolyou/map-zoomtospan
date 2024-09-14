@@ -41,11 +41,27 @@ export interface IViewport {
     insets: IInsets;
 }
 
-export interface IOverlay {
+export interface IPolylineOverlay {
+    points: ILatLng[];
+    width: number;
+}
+
+export type IPolygonOverlay = IPolylineOverlay;
+
+export interface ICircleOverlay {
+    center: ILatLng;
+    radius: number;
+}
+
+export interface IMarkerOverlay {
     position: ILatLng;
     boundingRect?: ISize;
     anchor?: IAnchor;
 }
+
+export type IStandardOverlay = IMarkerOverlay;
+
+export type IOverlay = IPolylineOverlay | ICircleOverlay | IMarkerOverlay;
 
 export interface MapZoomToSpanOptions {
     center?: ILatLng;
@@ -134,6 +150,33 @@ export function wrapLatLng(latLng: ILatLng): ILatLng {
     };
 }
 
+export function extendLatLngBounds(bounds: ILatLngBounds, otherBounds: ILatLng | ILatLngBounds): ILatLngBounds {
+    if ('lat' in otherBounds && 'lng' in otherBounds) {
+        return {
+            ne: {
+                lat: Math.max(bounds.ne.lat, otherBounds.lat),
+                lng: Math.max(bounds.ne.lng, otherBounds.lng),
+            },
+            sw: {
+                lat: Math.min(bounds.sw.lat, otherBounds.lat),
+                lng: Math.min(bounds.sw.lng, otherBounds.lng),
+            },
+        };
+    } else if ('ne' in otherBounds && 'sw' in otherBounds) {
+        return {
+            ne: {
+                lat: Math.max(bounds.ne.lat, otherBounds.ne.lat),
+                lng: Math.max(bounds.ne.lng, otherBounds.ne.lng),
+            },
+            sw: {
+                lat: Math.min(bounds.sw.lat, otherBounds.sw.lat),
+                lng: Math.min(bounds.sw.lng, otherBounds.sw.lng),
+            },
+        };
+    }
+    return bounds;
+}
+
 export function extendPointBounds(bounds: IPointBounds, otherBounds: IPointBounds): IPointBounds {
     return {
         topLeft: {
@@ -147,7 +190,49 @@ export function extendPointBounds(bounds: IPointBounds, otherBounds: IPointBound
     };
 }
 
-export function getOverlaysContainingPointBounds(overlays: IOverlay[], zoom: number, projection: IProjection): IPointBounds {
+export function normalizeOverlay(overlay: IOverlay): IStandardOverlay[] {
+    if ('position' in overlay) {
+        return [overlay];
+    }
+
+    if ('center' in overlay) {
+        return [
+            {
+                position: overlay.center,
+                boundingRect: {
+                width: overlay.radius * 2,
+                height: overlay.radius * 2,
+            },
+            anchor: { x: 0.5, y: 0.5 },
+        }];
+    }
+
+    if ('points' in overlay) {
+        let bounds: ILatLngBounds = {
+            ne: { lng: overlay.points[0].lng, lat: overlay.points[0].lat },
+            sw: { lng: overlay.points[0].lng, lat: overlay.points[0].lat },
+        };
+        for (const coord of overlay.points) {
+            bounds = extendLatLngBounds(bounds, coord);
+        }
+        return [
+            {
+                position: { lng: bounds.ne.lng, lat: bounds.ne.lat },
+                boundingRect: { width: overlay.width, height: overlay.width },
+                anchor: { x: 0.5, y: 0.5 },
+            },
+            {
+                position: { lng: bounds.sw.lng, lat: bounds.sw.lat },
+                boundingRect: { width: overlay.width, height: overlay.width },
+                anchor: { x: 0.5, y: 0.5 },
+            }
+        ]
+    }
+
+    throw new Error('Invalid overlay');
+}
+
+export function getOverlaysContainingPointBounds(overlays: IStandardOverlay[], zoom: number, projection: IProjection): IPointBounds {
     let bounds: IPointBounds = {
         topLeft: { x: Infinity, y: Infinity },
         bottomRight: { x: -Infinity, y: -Infinity },
@@ -171,7 +256,7 @@ export function getOverlaysContainingPointBounds(overlays: IOverlay[], zoom: num
     return bounds
 }
 
-export function extendOverlaysContainingPointBoundsWithCenter(overlays: IOverlay[], zoom: number, projection: IProjection, center: ILatLng): IPointBounds {
+export function extendOverlaysContainingPointBoundsWithCenter(overlays: IStandardOverlay[], zoom: number, projection: IProjection, center: ILatLng): IPointBounds {
     const centerPoint = projection.project(center, zoom);
     const overlayBounds = getOverlaysContainingPointBounds(overlays, zoom, projection);
     
@@ -211,6 +296,8 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
         return { ok: false, error: 'No overlays provided' };
     }
 
+    const overlays = options.overlays.flatMap(normalizeOverlay);
+
     const projection = options.projection || new WebMercatorProjection(options.worldSize || WebMercatorProjection.defaultWorldSize);
     const contentBounds: IPointBounds = {
         topLeft: {
@@ -240,10 +327,10 @@ export function mapZoomToSpan(options: MapZoomToSpanOptions): MapResult<MapZoomT
 
     while (rightZoomValue - leftZoomValue > precision) {
         const currentZoom = (leftZoomValue + rightZoomValue) / 2;
-        let overlayBounds = getOverlaysContainingPointBounds(options.overlays, currentZoom, projection);
+        let overlayBounds = getOverlaysContainingPointBounds(overlays, currentZoom, projection);
 
         if (options.center) {
-            overlayBounds = extendOverlaysContainingPointBoundsWithCenter(options.overlays, currentZoom, projection, options.center);
+            overlayBounds = extendOverlaysContainingPointBoundsWithCenter(overlays, currentZoom, projection, options.center);
         }
 
         if (isAllOverlaysCanBePutInsideContentArea(overlayBounds, contentBounds)) {

@@ -1,6 +1,8 @@
 {
   "name": "map-zoomtospan",
   "description": "A cross-platform utility to calculate a reasonable map zoom level and/or center point for a given map viewport.",
+  "repository": "https://github.com/Foolyou/map-zoomtospan",
+  "author": "Chen An <chen-an@outlook.com>",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +14,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tsc": "tsc",
+    "tsc": "tsc --project tsconfig.compile.json",
     "test": "vitest"
   },
   "devDependencies": {
@@ -20,9 +22,11 @@
     "@types/react-dom": "^18.3.0",
     "@types/styled-components": "^5.1.34",
     "@vitejs/plugin-react": "^4.3.1",
+    "geojson": "^0.5.0",
     "maplibre-gl": "^4.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
     "styled-component": "^2.8.0",
     "styled-components": "^6.1.13",
     "typescript": "^5.5.3",

@@ -1,4 +1,5 @@
 - [x] Fixed center support
+- [x] Router page
 - [ ] Demo for polylines
 - [ ] Demo for polygons
 - [ ] Demo for infowindows

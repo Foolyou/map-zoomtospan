@@ -16,3 +16,4 @@
 - [ ] helpers for BaiduMap
 - [ ] helpers for TencentMap
 - [ ] helpers for MicroApps
+- [ ] tsdoc

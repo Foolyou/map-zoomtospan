@@ -3,7 +3,7 @@
 - [x] Demo for polylines
 - [x] Demo for polygons
 - [ ] Demo for infowindows
-- [x] Demo for maplibre-js
+- [ ] Anti-meridian support
 - [ ] Documents and examples
 - [ ] Tests
 - [ ] NPM package

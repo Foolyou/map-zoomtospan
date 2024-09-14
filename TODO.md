@@ -1,7 +1,7 @@
 - [x] Fixed center support
 - [x] Router page
-- [ ] Demo for polylines
-- [ ] Demo for polygons
+- [x] Demo for polylines
+- [x] Demo for polygons
 - [ ] Demo for infowindows
 - [x] Demo for maplibre-js
 - [ ] Documents and examples

@@ -411,6 +411,38 @@ export const MapLibrePage = () => {
             width: map.getContainer().clientWidth,
             height: map.getContainer().clientHeight
         });
+
+        setTimeout(() => {
+            // Draw the anti-meridian line
+            const antiMeridianLine: GeoJSON.Feature<GeoJSON.LineString> = {
+                type: 'Feature',
+                properties: {},
+            geometry: {
+                type: 'LineString',
+                coordinates: [
+                    [180, -90],
+                    [180, 90]
+                ]
+                }
+            };
+
+            map.addLayer({
+                id: 'anti-meridian-line',
+                type: 'line',
+                source: {
+                    type: 'geojson',
+                    data: antiMeridianLine
+                },
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#FF0000',
+                    'line-width': 2
+                }
+            });
+        }, 1000);
     };
 
     const onMapClick = (event: any) => {
